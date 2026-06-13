@@ -360,7 +360,7 @@ function fmtMatchTime(match){
   return match.time + ' (الكويت)';
 }
 const ADMIN_PASS = 'eman2026';
-let isAdmin = localStorage.getItem('wc26_admin') === 'yes';
+let isAdmin = false; // لا يتذكر الأدمن بين الجلسات
 
 // ضغطة سرية على الكأس 5 مرات
 let _trophyTaps = 0, _trophyTimer = null;
@@ -377,7 +377,6 @@ function trophyTap(){
 function toggleAdmin(){
   if(isAdmin){
     isAdmin = false;
-    localStorage.removeItem('wc26_admin');
     renderAll();
     toast('🔒 خرجتِ من وضع الأدمن');
     return;
@@ -395,7 +394,6 @@ function submitAdminBar(){
   if(!inp) return;
   if(inp.value === ADMIN_PASS){
     isAdmin = true;
-    localStorage.setItem('wc26_admin','yes');
     document.getElementById('admin-bar').style.display = 'none';
     renderAll();
     toast('✅ أهلاً بك أدمن!');
@@ -409,7 +407,6 @@ function submitAdminPass(){
   const pass = document.getElementById('admin-pass-input').value;
   if(pass === ADMIN_PASS){
     isAdmin = true;
-    localStorage.setItem('wc26_admin','yes');
     document.getElementById('admin-modal').style.display='none';
     renderAll();
     toast('✅ أهلاً بك أدمن!');
