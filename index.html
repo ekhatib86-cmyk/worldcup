@@ -107,6 +107,9 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
 .divider{border:none;border-top:1px solid #1e2e1e;margin:12px 0}
 .status-ok{background:rgba(102,187,106,.08);border:1px solid rgba(102,187,106,.25);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--win);margin-bottom:12px}
 .status-warn{background:rgba(239,83,80,.06);border:1px solid rgba(239,83,80,.2);border-radius:8px;padding:8px 11px;font-size:12px;color:#ef9a9a;margin-bottom:12px}
+.countdown-open{background:rgba(102,187,106,.1);border:1px solid rgba(102,187,106,.3);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--win);font-weight:700;text-align:center;margin:0 12px 10px}
+.countdown-soon{background:rgba(255,213,79,.1);border:1px solid rgba(255,213,79,.3);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--exact);font-weight:700;text-align:center;margin:0 12px 10px}
+.countdown-closed{background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.2);border-radius:8px;padding:6px 10px;font-size:11px;color:#ef9a9a;font-weight:700;text-align:center;margin:0 12px 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner-sm{width:10px;height:10px;border:2px solid #2a3a2a;border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 </style>
@@ -121,6 +124,7 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
     <div class="live-badge"><span class="live-dot"></span>نتائج حية تلقائية</div>
     <span id="sync-badge" style="font-size:11px;color:var(--muted);opacity:0;transition:opacity 1.5s"></span>
     <button class="refresh-btn" onclick="manualRefresh()">🔄 تحديث</button>
+    <button class="refresh-btn" onclick="toggleAdmin()" id="admin-btn" style="background:rgba(229,57,53,.15);border-color:rgba(229,57,53,.4);color:#ef5350">🔐 أدمن</button>
   </div>
 </div>
 
@@ -188,6 +192,18 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
 
 </div>
 
+<div id="admin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a211a;border:1px solid #F5C518;border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-size:16px;font-weight:700;color:#F5C518;margin-bottom:16px">دخول الأدمن</div>
+    <input id="admin-pass-input" type="password" placeholder="كلمة السر" 
+      style="width:100%;background:#0a0f0a;border:1px solid #2a3a2a;border-radius:8px;padding:12px;color:#e8f5e9;font-family:Cairo,sans-serif;font-size:16px;text-align:center;outline:none;margin-bottom:12px"
+      onkeydown="if(event.key==='Enter')submitAdminPass()">
+    <button onclick="submitAdminPass()" style="width:100%;padding:11px;background:#F5C518;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;color:#000;cursor:pointer;margin-bottom:8px">دخول ✅</button>
+    <button onclick="closeAdminModal()" style="width:100%;padding:9px;background:transparent;border:1px solid #2a3a2a;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;color:#7a9b7c;cursor:pointer">إلغاء</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -195,93 +211,111 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
 // MATCH DATA — 104 مباراة كأس العالم 2026
 // ============================================================
 const MATCHES = [
-  {id:1,t1:'المكسيك',t2:'جنوب أفريقيا',date:'2026-06-11',phase:'دور المجموعات',group:'A'},
-  {id:2,t1:'كوريا الجنوبية',t2:'التشيك',date:'2026-06-11',phase:'دور المجموعات',group:'A'},
-  {id:3,t1:'كندا',t2:'البوسنة والهرسك',date:'2026-06-12',phase:'دور المجموعات',group:'B'},
-  {id:4,t1:'الولايات المتحدة',t2:'باراغواي',date:'2026-06-12',phase:'دور المجموعات',group:'D'},
-  {id:5,t1:'قطر',t2:'سويسرا',date:'2026-06-13',phase:'دور المجموعات',group:'B'},
-  {id:6,t1:'البرازيل',t2:'المغرب',date:'2026-06-13',phase:'دور المجموعات',group:'C'},
-  {id:7,t1:'هايتي',t2:'اسكتلندا',date:'2026-06-13',phase:'دور المجموعات',group:'C'},
-  {id:8,t1:'أستراليا',t2:'تركيا',date:'2026-06-13',phase:'دور المجموعات',group:'D'},
-  {id:9,t1:'ألمانيا',t2:'كوراسو',date:'2026-06-14',phase:'دور المجموعات',group:'E'},
-  {id:10,t1:'هولندا',t2:'اليابان',date:'2026-06-14',phase:'دور المجموعات',group:'F'},
-  {id:11,t1:'ساحل العاج',t2:'الإكوادور',date:'2026-06-14',phase:'دور المجموعات',group:'E'},
-  {id:12,t1:'السويد',t2:'تونس',date:'2026-06-14',phase:'دور المجموعات',group:'F'},
-  {id:13,t1:'إسبانيا',t2:'الرأس الأخضر',date:'2026-06-15',phase:'دور المجموعات',group:'H'},
-  {id:14,t1:'بلجيكا',t2:'مصر',date:'2026-06-15',phase:'دور المجموعات',group:'G'},
-  {id:15,t1:'السعودية',t2:'أوروغواي',date:'2026-06-15',phase:'دور المجموعات',group:'H'},
-  {id:16,t1:'إيران',t2:'نيوزيلندا',date:'2026-06-15',phase:'دور المجموعات',group:'G'},
-  {id:17,t1:'فرنسا',t2:'السنغال',date:'2026-06-16',phase:'دور المجموعات',group:'I'},
-  {id:18,t1:'العراق',t2:'النرويج',date:'2026-06-16',phase:'دور المجموعات',group:'I'},
-  {id:19,t1:'الأرجنتين',t2:'الجزائر',date:'2026-06-16',phase:'دور المجموعات',group:'J'},
-  {id:20,t1:'النمسا',t2:'الأردن',date:'2026-06-16',phase:'دور المجموعات',group:'J'},
-  {id:21,t1:'البرتغال',t2:'الكونغو الديمقراطية',date:'2026-06-17',phase:'دور المجموعات',group:'K'},
-  {id:22,t1:'إنجلترا',t2:'كرواتيا',date:'2026-06-17',phase:'دور المجموعات',group:'L'},
-  {id:23,t1:'غانا',t2:'بنما',date:'2026-06-17',phase:'دور المجموعات',group:'L'},
-  {id:24,t1:'أوزبكستان',t2:'كولومبيا',date:'2026-06-17',phase:'دور المجموعات',group:'K'},
-  {id:25,t1:'التشيك',t2:'جنوب أفريقيا',date:'2026-06-18',phase:'دور المجموعات',group:'A'},
-  {id:26,t1:'سويسرا',t2:'البوسنة والهرسك',date:'2026-06-18',phase:'دور المجموعات',group:'B'},
-  {id:27,t1:'كندا',t2:'قطر',date:'2026-06-18',phase:'دور المجموعات',group:'B'},
-  {id:28,t1:'المكسيك',t2:'كوريا الجنوبية',date:'2026-06-18',phase:'دور المجموعات',group:'A'},
-  {id:29,t1:'اسكتلندا',t2:'المغرب',date:'2026-06-19',phase:'دور المجموعات',group:'C'},
-  {id:30,t1:'الولايات المتحدة',t2:'أستراليا',date:'2026-06-19',phase:'دور المجموعات',group:'D'},
-  {id:31,t1:'البرازيل',t2:'هايتي',date:'2026-06-19',phase:'دور المجموعات',group:'C'},
-  {id:32,t1:'تركيا',t2:'باراغواي',date:'2026-06-19',phase:'دور المجموعات',group:'D'},
-  {id:33,t1:'هولندا',t2:'السويد',date:'2026-06-20',phase:'دور المجموعات',group:'F'},
-  {id:34,t1:'ألمانيا',t2:'ساحل العاج',date:'2026-06-20',phase:'دور المجموعات',group:'E'},
-  {id:35,t1:'الإكوادور',t2:'كوراسو',date:'2026-06-20',phase:'دور المجموعات',group:'E'},
-  {id:36,t1:'تونس',t2:'اليابان',date:'2026-06-20',phase:'دور المجموعات',group:'F'},
-  {id:37,t1:'إسبانيا',t2:'السعودية',date:'2026-06-21',phase:'دور المجموعات',group:'H'},
-  {id:38,t1:'بلجيكا',t2:'إيران',date:'2026-06-21',phase:'دور المجموعات',group:'G'},
-  {id:39,t1:'أوروغواي',t2:'الرأس الأخضر',date:'2026-06-21',phase:'دور المجموعات',group:'H'},
-  {id:40,t1:'نيوزيلندا',t2:'مصر',date:'2026-06-21',phase:'دور المجموعات',group:'G'},
-  {id:41,t1:'الأرجنتين',t2:'النمسا',date:'2026-06-22',phase:'دور المجموعات',group:'J'},
-  {id:42,t1:'فرنسا',t2:'العراق',date:'2026-06-22',phase:'دور المجموعات',group:'I'},
-  {id:43,t1:'النرويج',t2:'السنغال',date:'2026-06-22',phase:'دور المجموعات',group:'I'},
-  {id:44,t1:'الأردن',t2:'الجزائر',date:'2026-06-22',phase:'دور المجموعات',group:'J'},
-  {id:45,t1:'البرتغال',t2:'أوزبكستان',date:'2026-06-23',phase:'دور المجموعات',group:'K'},
-  {id:46,t1:'إنجلترا',t2:'غانا',date:'2026-06-23',phase:'دور المجموعات',group:'L'},
-  {id:47,t1:'بنما',t2:'كرواتيا',date:'2026-06-23',phase:'دور المجموعات',group:'L'},
-  {id:48,t1:'كولومبيا',t2:'الكونغو الديمقراطية',date:'2026-06-23',phase:'دور المجموعات',group:'K'},
-  {id:49,t1:'سويسرا',t2:'كندا',date:'2026-06-24',phase:'دور المجموعات',group:'B'},
-  {id:50,t1:'البوسنة والهرسك',t2:'قطر',date:'2026-06-24',phase:'دور المجموعات',group:'B'},
-  {id:51,t1:'اسكتلندا',t2:'البرازيل',date:'2026-06-24',phase:'دور المجموعات',group:'C'},
-  {id:52,t1:'المغرب',t2:'هايتي',date:'2026-06-24',phase:'دور المجموعات',group:'C'},
-  {id:53,t1:'التشيك',t2:'المكسيك',date:'2026-06-24',phase:'دور المجموعات',group:'A'},
-  {id:54,t1:'جنوب أفريقيا',t2:'كوريا الجنوبية',date:'2026-06-24',phase:'دور المجموعات',group:'A'},
-  {id:55,t1:'الإكوادور',t2:'ألمانيا',date:'2026-06-25',phase:'دور المجموعات',group:'E'},
-  {id:56,t1:'كوراسو',t2:'ساحل العاج',date:'2026-06-25',phase:'دور المجموعات',group:'E'},
-  {id:57,t1:'اليابان',t2:'السويد',date:'2026-06-25',phase:'دور المجموعات',group:'F'},
-  {id:58,t1:'تونس',t2:'هولندا',date:'2026-06-25',phase:'دور المجموعات',group:'F'},
-  {id:59,t1:'تركيا',t2:'الولايات المتحدة',date:'2026-06-25',phase:'دور المجموعات',group:'D'},
-  {id:60,t1:'باراغواي',t2:'أستراليا',date:'2026-06-25',phase:'دور المجموعات',group:'D'},
-  {id:61,t1:'النرويج',t2:'فرنسا',date:'2026-06-26',phase:'دور المجموعات',group:'I'},
-  {id:62,t1:'السنغال',t2:'العراق',date:'2026-06-26',phase:'دور المجموعات',group:'I'},
-  {id:63,t1:'الرأس الأخضر',t2:'السعودية',date:'2026-06-26',phase:'دور المجموعات',group:'H'},
-  {id:64,t1:'أوروغواي',t2:'إسبانيا',date:'2026-06-26',phase:'دور المجموعات',group:'H'},
-  {id:65,t1:'مصر',t2:'بلجيكا',date:'2026-06-26',phase:'دور المجموعات',group:'G'},
-  {id:66,t1:'إيران',t2:'نيوزيلندا',date:'2026-06-26',phase:'دور المجموعات',group:'G'},
-  {id:67,t1:'الأردن',t2:'الأرجنتين',date:'2026-06-27',phase:'دور المجموعات',group:'J'},
-  {id:68,t1:'الجزائر',t2:'النمسا',date:'2026-06-27',phase:'دور المجموعات',group:'J'},
-  {id:69,t1:'كولومبيا',t2:'البرتغال',date:'2026-06-27',phase:'دور المجموعات',group:'K'},
-  {id:70,t1:'الكونغو الديمقراطية',t2:'أوزبكستان',date:'2026-06-27',phase:'دور المجموعات',group:'K'},
-  {id:71,t1:'بنما',t2:'إنجلترا',date:'2026-06-27',phase:'دور المجموعات',group:'L'},
-  {id:72,t1:'كرواتيا',t2:'غانا',date:'2026-06-27',phase:'دور المجموعات',group:'L'},
-  {id:101,t1:'المركز 1A',t2:'المركز 2B',date:'2026-06-28',phase:'دور الـ32',group:''},
-  {id:102,t1:'المركز 1C',t2:'المركز 2D',date:'2026-06-29',phase:'دور الـ32',group:''},
-  {id:103,t1:'المركز 1E',t2:'المركز 2F',date:'2026-06-30',phase:'دور الـ32',group:''},
-  {id:104,t1:'المركز 1G',t2:'المركز 2H',date:'2026-07-01',phase:'دور الـ32',group:''},
-  {id:105,t1:'المركز 1I',t2:'المركز 2J',date:'2026-07-02',phase:'دور الـ32',group:''},
-  {id:106,t1:'المركز 1K',t2:'المركز 2L',date:'2026-07-03',phase:'دور الـ32',group:''},
-  {id:201,t1:'الفائز 101',t2:'الفائز 102',date:'2026-07-04',phase:'دور الـ16',group:''},
-  {id:202,t1:'الفائز 103',t2:'الفائز 104',date:'2026-07-05',phase:'دور الـ16',group:''},
-  {id:203,t1:'الفائز 105',t2:'الفائز 106',date:'2026-07-06',phase:'دور الـ16',group:''},
-  {id:301,t1:'الفائز 201',t2:'الفائز 202',date:'2026-07-09',phase:'ربع النهائي',group:''},
-  {id:302,t1:'الفائز 203',t2:'تحدد لاحقاً',date:'2026-07-10',phase:'ربع النهائي',group:''},
-  {id:401,t1:'الفائز 301',t2:'الفائز 302',date:'2026-07-14',phase:'نصف النهائي',group:''},
-  {id:402,t1:'تحدد لاحقاً',t2:'تحدد لاحقاً',date:'2026-07-15',phase:'نصف النهائي',group:''},
-  {id:501,t1:'الخاسر 401',t2:'الخاسر 402',date:'2026-07-18',phase:'المركز الثالث',group:''},
-  {id:502,t1:'الفائز 401',t2:'الفائز 402',date:'2026-07-19',phase:'النهائي',group:''},
+  // ====== 11 يونيو ======
+  {id:1, t1:'المكسيك',        t2:'جنوب أفريقيا',         date:'2026-06-11', time:'19:00', phase:'دور المجموعات', group:'A'},
+  {id:2, t1:'كوريا الجنوبية', t2:'التشيك',                date:'2026-06-11', time:'22:00', phase:'دور المجموعات', group:'A'},
+  // ====== 12 يونيو ======
+  {id:3, t1:'كندا',           t2:'البوسنة والهرسك',        date:'2026-06-12', time:'19:00', phase:'دور المجموعات', group:'B'},
+  {id:4, t1:'الولايات المتحدة',t2:'باراغواي',              date:'2026-06-12', time:'22:00', phase:'دور المجموعات', group:'D'},
+  // ====== 13 يونيو ======
+  {id:5, t1:'قطر',            t2:'سويسرا',                date:'2026-06-13', time:'22:00', phase:'دور المجموعات', group:'B'},
+  {id:6, t1:'البرازيل',       t2:'المغرب',                date:'2026-06-14', time:'01:00', phase:'دور المجموعات', group:'C'},
+  {id:7, t1:'هايتي',          t2:'اسكتلندا',              date:'2026-06-14', time:'01:00', phase:'دور المجموعات', group:'C'},
+  {id:8, t1:'أستراليا',       t2:'تركيا',                 date:'2026-06-14', time:'01:00', phase:'دور المجموعات', group:'D'},
+  // ====== 14 يونيو ======
+  {id:9, t1:'ألمانيا',        t2:'كوراسو',                date:'2026-06-14', time:'19:00', phase:'دور المجموعات', group:'E'},
+  {id:10,t1:'هولندا',         t2:'اليابان',               date:'2026-06-14', time:'22:00', phase:'دور المجموعات', group:'F'},
+  {id:11,t1:'ساحل العاج',     t2:'الإكوادور',             date:'2026-06-14', time:'22:00', phase:'دور المجموعات', group:'E'},
+  {id:12,t1:'السويد',         t2:'تونس',                  date:'2026-06-15', time:'01:00', phase:'دور المجموعات', group:'F'},
+  // ====== 15 يونيو ======
+  {id:13,t1:'إسبانيا',        t2:'الرأس الأخضر',          date:'2026-06-15', time:'19:00', phase:'دور المجموعات', group:'H'},
+  {id:14,t1:'بلجيكا',         t2:'مصر',                   date:'2026-06-15', time:'19:00', phase:'دور المجموعات', group:'G'},
+  {id:15,t1:'السعودية',       t2:'أوروغواي',              date:'2026-06-15', time:'22:00', phase:'دور المجموعات', group:'H'},
+  {id:16,t1:'إيران',          t2:'نيوزيلندا',             date:'2026-06-15', time:'22:00', phase:'دور المجموعات', group:'G'},
+  // ====== 16 يونيو ======
+  {id:17,t1:'فرنسا',          t2:'السنغال',               date:'2026-06-16', time:'19:00', phase:'دور المجموعات', group:'I'},
+  {id:18,t1:'العراق',         t2:'النرويج',               date:'2026-06-16', time:'19:00', phase:'دور المجموعات', group:'I'},
+  {id:19,t1:'الأرجنتين',      t2:'الجزائر',               date:'2026-06-16', time:'22:00', phase:'دور المجموعات', group:'J'},
+  {id:20,t1:'النمسا',         t2:'الأردن',                date:'2026-06-16', time:'22:00', phase:'دور المجموعات', group:'J'},
+  // ====== 17 يونيو ======
+  {id:21,t1:'البرتغال',       t2:'الكونغو الديمقراطية',   date:'2026-06-17', time:'19:00', phase:'دور المجموعات', group:'K'},
+  {id:22,t1:'إنجلترا',        t2:'كرواتيا',               date:'2026-06-17', time:'19:00', phase:'دور المجموعات', group:'L'},
+  {id:23,t1:'غانا',           t2:'بنما',                  date:'2026-06-17', time:'22:00', phase:'دور المجموعات', group:'L'},
+  {id:24,t1:'أوزبكستان',      t2:'كولومبيا',              date:'2026-06-17', time:'22:00', phase:'دور المجموعات', group:'K'},
+  // ====== 18 يونيو ======
+  {id:25,t1:'التشيك',         t2:'جنوب أفريقيا',          date:'2026-06-18', time:'19:00', phase:'دور المجموعات', group:'A'},
+  {id:26,t1:'سويسرا',         t2:'البوسنة والهرسك',        date:'2026-06-18', time:'19:00', phase:'دور المجموعات', group:'B'},
+  {id:27,t1:'كندا',           t2:'قطر',                   date:'2026-06-18', time:'22:00', phase:'دور المجموعات', group:'B'},
+  {id:28,t1:'المكسيك',        t2:'كوريا الجنوبية',        date:'2026-06-18', time:'22:00', phase:'دور المجموعات', group:'A'},
+  // ====== 19 يونيو ======
+  {id:29,t1:'اسكتلندا',       t2:'المغرب',                date:'2026-06-19', time:'19:00', phase:'دور المجموعات', group:'C'},
+  {id:30,t1:'الولايات المتحدة',t2:'أستراليا',              date:'2026-06-19', time:'19:00', phase:'دور المجموعات', group:'D'},
+  {id:31,t1:'البرازيل',       t2:'هايتي',                 date:'2026-06-19', time:'22:00', phase:'دور المجموعات', group:'C'},
+  {id:32,t1:'تركيا',          t2:'باراغواي',              date:'2026-06-19', time:'22:00', phase:'دور المجموعات', group:'D'},
+  // ====== 20 يونيو ======
+  {id:33,t1:'هولندا',         t2:'السويد',                date:'2026-06-20', time:'19:00', phase:'دور المجموعات', group:'F'},
+  {id:34,t1:'ألمانيا',        t2:'ساحل العاج',            date:'2026-06-20', time:'19:00', phase:'دور المجموعات', group:'E'},
+  {id:35,t1:'الإكوادور',      t2:'كوراسو',                date:'2026-06-20', time:'22:00', phase:'دور المجموعات', group:'E'},
+  {id:36,t1:'تونس',           t2:'اليابان',               date:'2026-06-20', time:'22:00', phase:'دور المجموعات', group:'F'},
+  // ====== 21 يونيو ======
+  {id:37,t1:'إسبانيا',        t2:'السعودية',              date:'2026-06-21', time:'19:00', phase:'دور المجموعات', group:'H'},
+  {id:38,t1:'بلجيكا',         t2:'إيران',                 date:'2026-06-21', time:'19:00', phase:'دور المجموعات', group:'G'},
+  {id:39,t1:'أوروغواي',       t2:'الرأس الأخضر',          date:'2026-06-21', time:'22:00', phase:'دور المجموعات', group:'H'},
+  {id:40,t1:'نيوزيلندا',      t2:'مصر',                   date:'2026-06-21', time:'22:00', phase:'دور المجموعات', group:'G'},
+  // ====== 22 يونيو ======
+  {id:41,t1:'الأرجنتين',      t2:'النمسا',                date:'2026-06-22', time:'19:00', phase:'دور المجموعات', group:'J'},
+  {id:42,t1:'فرنسا',          t2:'العراق',                date:'2026-06-22', time:'19:00', phase:'دور المجموعات', group:'I'},
+  {id:43,t1:'النرويج',        t2:'السنغال',               date:'2026-06-22', time:'22:00', phase:'دور المجموعات', group:'I'},
+  {id:44,t1:'الأردن',         t2:'الجزائر',               date:'2026-06-22', time:'22:00', phase:'دور المجموعات', group:'J'},
+  // ====== 23 يونيو ======
+  {id:45,t1:'البرتغال',       t2:'أوزبكستان',             date:'2026-06-23', time:'19:00', phase:'دور المجموعات', group:'K'},
+  {id:46,t1:'إنجلترا',        t2:'غانا',                  date:'2026-06-23', time:'19:00', phase:'دور المجموعات', group:'L'},
+  {id:47,t1:'بنما',           t2:'كرواتيا',               date:'2026-06-23', time:'22:00', phase:'دور المجموعات', group:'L'},
+  {id:48,t1:'كولومبيا',       t2:'الكونغو الديمقراطية',   date:'2026-06-23', time:'22:00', phase:'دور المجموعات', group:'K'},
+  // ====== 24 يونيو ======
+  {id:49,t1:'سويسرا',         t2:'كندا',                  date:'2026-06-24', time:'19:00', phase:'دور المجموعات', group:'B'},
+  {id:50,t1:'البوسنة والهرسك', t2:'قطر',                  date:'2026-06-24', time:'19:00', phase:'دور المجموعات', group:'B'},
+  {id:51,t1:'اسكتلندا',       t2:'البرازيل',              date:'2026-06-24', time:'22:00', phase:'دور المجموعات', group:'C'},
+  {id:52,t1:'المغرب',         t2:'هايتي',                 date:'2026-06-24', time:'22:00', phase:'دور المجموعات', group:'C'},
+  {id:53,t1:'التشيك',         t2:'المكسيك',               date:'2026-06-24', time:'22:00', phase:'دور المجموعات', group:'A'},
+  {id:54,t1:'جنوب أفريقيا',   t2:'كوريا الجنوبية',        date:'2026-06-24', time:'22:00', phase:'دور المجموعات', group:'A'},
+  // ====== 25 يونيو ======
+  {id:55,t1:'الإكوادور',      t2:'ألمانيا',               date:'2026-06-25', time:'19:00', phase:'دور المجموعات', group:'E'},
+  {id:56,t1:'كوراسو',         t2:'ساحل العاج',            date:'2026-06-25', time:'19:00', phase:'دور المجموعات', group:'E'},
+  {id:57,t1:'اليابان',        t2:'السويد',                date:'2026-06-25', time:'22:00', phase:'دور المجموعات', group:'F'},
+  {id:58,t1:'تونس',           t2:'هولندا',                date:'2026-06-25', time:'22:00', phase:'دور المجموعات', group:'F'},
+  {id:59,t1:'تركيا',          t2:'الولايات المتحدة',      date:'2026-06-25', time:'22:00', phase:'دور المجموعات', group:'D'},
+  {id:60,t1:'باراغواي',       t2:'أستراليا',              date:'2026-06-25', time:'22:00', phase:'دور المجموعات', group:'D'},
+  // ====== 26 يونيو ======
+  {id:61,t1:'النرويج',        t2:'فرنسا',                 date:'2026-06-26', time:'19:00', phase:'دور المجموعات', group:'I'},
+  {id:62,t1:'السنغال',        t2:'العراق',                date:'2026-06-26', time:'19:00', phase:'دور المجموعات', group:'I'},
+  {id:63,t1:'الرأس الأخضر',   t2:'السعودية',              date:'2026-06-26', time:'22:00', phase:'دور المجموعات', group:'H'},
+  {id:64,t1:'أوروغواي',       t2:'إسبانيا',               date:'2026-06-26', time:'22:00', phase:'دور المجموعات', group:'H'},
+  {id:65,t1:'مصر',            t2:'بلجيكا',                date:'2026-06-26', time:'22:00', phase:'دور المجموعات', group:'G'},
+  {id:66,t1:'إيران',          t2:'نيوزيلندا',             date:'2026-06-26', time:'22:00', phase:'دور المجموعات', group:'G'},
+  // ====== 27 يونيو ======
+  {id:67,t1:'الأردن',         t2:'الأرجنتين',             date:'2026-06-27', time:'19:00', phase:'دور المجموعات', group:'J'},
+  {id:68,t1:'الجزائر',        t2:'النمسا',                date:'2026-06-27', time:'19:00', phase:'دور المجموعات', group:'J'},
+  {id:69,t1:'كولومبيا',       t2:'البرتغال',              date:'2026-06-27', time:'22:00', phase:'دور المجموعات', group:'K'},
+  {id:70,t1:'الكونغو الديمقراطية',t2:'أوزبكستان',         date:'2026-06-27', time:'22:00', phase:'دور المجموعات', group:'K'},
+  {id:71,t1:'بنما',           t2:'إنجلترا',               date:'2026-06-27', time:'22:00', phase:'دور المجموعات', group:'L'},
+  {id:72,t1:'كرواتيا',        t2:'غانا',                  date:'2026-06-27', time:'22:00', phase:'دور المجموعات', group:'L'},
+  // ====== أدوار الإقصاء ======
+  {id:101,t1:'المركز 1A',t2:'المركز 2B',date:'2026-06-28',time:'19:00',phase:'دور الـ32',group:''},
+  {id:102,t1:'المركز 1C',t2:'المركز 2D',date:'2026-06-29',time:'19:00',phase:'دور الـ32',group:''},
+  {id:103,t1:'المركز 1E',t2:'المركز 2F',date:'2026-06-30',time:'19:00',phase:'دور الـ32',group:''},
+  {id:104,t1:'المركز 1G',t2:'المركز 2H',date:'2026-07-01',time:'19:00',phase:'دور الـ32',group:''},
+  {id:105,t1:'المركز 1I',t2:'المركز 2J',date:'2026-07-02',time:'19:00',phase:'دور الـ32',group:''},
+  {id:106,t1:'المركز 1K',t2:'المركز 2L',date:'2026-07-03',time:'19:00',phase:'دور الـ32',group:''},
+  {id:201,t1:'الفائز 101',t2:'الفائز 102',date:'2026-07-04',time:'19:00',phase:'دور الـ16',group:''},
+  {id:202,t1:'الفائز 103',t2:'الفائز 104',date:'2026-07-05',time:'19:00',phase:'دور الـ16',group:''},
+  {id:203,t1:'الفائز 105',t2:'الفائز 106',date:'2026-07-06',time:'19:00',phase:'دور الـ16',group:''},
+  {id:301,t1:'الفائز 201',t2:'الفائز 202',date:'2026-07-09',time:'19:00',phase:'ربع النهائي',group:''},
+  {id:302,t1:'الفائز 203',t2:'تحدد لاحقاً',date:'2026-07-10',time:'19:00',phase:'ربع النهائي',group:''},
+  {id:401,t1:'الفائز 301',t2:'الفائز 302',date:'2026-07-14',time:'19:00',phase:'نصف النهائي',group:''},
+  {id:402,t1:'تحدد لاحقاً',t2:'تحدد لاحقاً',date:'2026-07-15',time:'19:00',phase:'نصف النهائي',group:''},
+  {id:501,t1:'الخاسر 401',t2:'الخاسر 402',date:'2026-07-18',time:'19:00',phase:'المركز الثالث',group:''},
+  {id:502,t1:'الفائز 401',t2:'الفائز 402',date:'2026-07-19',time:'19:00',phase:'النهائي',group:''},
 ];
 
 const TEAMS = [
@@ -309,9 +343,87 @@ let lastAIFetch = 0;
 let autoInterval = null;
 
 // ============================================================
-// FIREBASE CONFIG
+// TIME UTILS — بتوقيت الكويت (+3)
 // ============================================================
-const FB_URL = 'https://family-worldcup-a5293-default-rtdb.firebaseio.com';
+function getMatchDateTime(match){
+  if(!match.date || !match.time) return null;
+  // نبني التاريخ والوقت بتوقيت الكويت UTC+3
+  const [y,mo,d] = match.date.split('-').map(Number);
+  const [h,m] = match.time.split(':').map(Number);
+  // نحول من Kuwait time (UTC+3) لـ UTC
+  return new Date(Date.UTC(y, mo-1, d, h-3, m));
+}
+
+function getCountdown(match){
+  const dt = getMatchDateTime(match);
+  if(!dt) return null;
+  const now = Date.now();
+  const diff = dt.getTime() - now;
+  return diff; // milliseconds (negative = انتهت)
+}
+
+function isMatchLocked(match){
+  // يُغلق التخمين عند بداية المباراة
+  return getCountdown(match) <= 0;
+}
+
+function formatCountdown(ms){
+  if(ms <= 0) return null;
+  const totalSecs = Math.floor(ms / 1000);
+  const days  = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins  = Math.floor((totalSecs % 3600) / 60);
+  const secs  = totalSecs % 60;
+  if(days > 0)  return `${days} يوم و ${hours} ساعة`;
+  if(hours > 0) return `${hours}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  return `${mins}:${String(secs).padStart(2,'0')}`;
+}
+
+function fmtMatchTime(match){
+  if(!match.time) return '';
+  return match.time + ' (الكويت)';
+}
+const ADMIN_PASS = 'eman2026';
+let isAdmin = localStorage.getItem('wc26_admin') === 'yes';
+
+function toggleAdmin(){
+  if(isAdmin){
+    isAdmin = false;
+    localStorage.removeItem('wc26_admin');
+    renderAll();
+    toast('🔒 خرجتِ من وضع الأدمن');
+    return;
+  }
+  document.getElementById('admin-modal').style.display='flex';
+  document.getElementById('admin-pass-input').value='';
+  setTimeout(()=>document.getElementById('admin-pass-input').focus(),100);
+}
+
+function submitAdminPass(){
+  const pass = document.getElementById('admin-pass-input').value;
+  if(pass === ADMIN_PASS){
+    isAdmin = true;
+    localStorage.setItem('wc26_admin','yes');
+    document.getElementById('admin-modal').style.display='none';
+    renderAll();
+    toast('✅ أهلاً بك أدمن!');
+  } else {
+    toast('❌ كلمة السر غلط');
+    document.getElementById('admin-pass-input').value='';
+  }
+}
+
+function closeAdminModal(){
+  document.getElementById('admin-modal').style.display='none';
+}
+
+// ============================================================
+// FIREBASE REST API
+// ============================================================
+const FB_BASE = 'https://family-worldcup-a5293-default-rtdb.firebaseio.com';
+const FB_PATH = '/wc26';
+
+function fbUrl(path){ return `${FB_BASE}${path}.json`; }
 
 function syncBadge(status){
   const b=document.getElementById('sync-badge');
@@ -322,57 +434,94 @@ function syncBadge(status){
   if(status==='ok') setTimeout(()=>b.style.opacity='0',2500);
 }
 
+async function fbFetch(path, options={}){
+  const url = fbUrl(path);
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers||{}) }
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
 async function cloudSave(){
   syncBadge('saving');
   try{
-    await fetch(`${FB_URL}/wc26.json`,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(state)
+    const membersObj = {};
+    state.members.forEach(m => { membersObj['m'+m.id] = m; });
+    await fbFetch(FB_PATH, {
+      method: 'PUT',
+      body: JSON.stringify({ members: membersObj, results: state.results, predictions: state.predictions })
     });
     syncBadge('ok');
-  }catch(e){ syncBadge('err'); }
+  }catch(e){
+    syncBadge('err');
+    console.error('save error:', e);
+  }
 }
 
 async function cloudLoad(){
   syncBadge('loading');
-  try{
-    const r = await fetch(`${FB_URL}/wc26.json`);
-    const data = await r.json();
-    if(data && data.members) state = data;
-    syncBadge('ok');
-  }catch(e){ syncBadge('err'); }
+  for(let attempt=1; attempt<=3; attempt++){
+    try{
+      const data = await fbFetch(FB_PATH);
+      if(!data){ syncBadge('ok'); return; }
+      // members
+      if(data.members){
+        state.members = Array.isArray(data.members)
+          ? data.members.filter(Boolean)
+          : Object.values(data.members).filter(Boolean);
+      }
+      // results
+      state.results = {};
+      if(data.results) Object.entries(data.results).forEach(([k,v])=>{
+        state.results[parseInt(k)||k] = v;
+      });
+      // predictions
+      state.predictions = {};
+      if(data.predictions) Object.entries(data.predictions).forEach(([k,v])=>{
+        const id = parseInt(k)||k;
+        state.predictions[id] = Array.isArray(v) ? v.filter(Boolean) : Object.values(v).filter(Boolean);
+      });
+      syncBadge('ok');
+      return;
+    }catch(e){
+      console.error(`load attempt ${attempt}:`, e);
+      if(attempt < 3) await new Promise(r=>setTimeout(r, 1500));
+      else syncBadge('err');
+    }
+  }
 }
 
-// مراقبة التغييرات اللحظية — Firebase SSE
+// مراقبة التغييرات اللحظية عبر Firebase SSE
 function startRealtimeSync(){
-  const es = new EventSource(`${FB_URL}/wc26.json`);
-  es.addEventListener('put', e=>{
-    try{
-      const msg = JSON.parse(e.data);
-      if(msg.data && msg.data.members){
-        state = msg.data;
-        recalcPoints();
-        renderAll();
-      }
-    }catch(err){}
-  });
-  es.addEventListener('patch', e=>{
-    try{
-      const msg = JSON.parse(e.data);
-      if(msg.data){
-        Object.assign(state, msg.data);
-        recalcPoints();
-        renderAll();
-      }
-    }catch(err){}
-  });
-  es.onerror = ()=>{ syncBadge('err'); };
+  try{
+    const es = new EventSource(`${FB_BASE}${FB_PATH}.json`);
+    es.addEventListener('put', e=>{
+      try{
+        const d = JSON.parse(e.data).data;
+        if(!d) return;
+        if(d.members){
+          state.members = Array.isArray(d.members)
+            ? d.members.filter(Boolean)
+            : Object.values(d.members).filter(Boolean);
+        }
+        if(d.results) Object.entries(d.results).forEach(([k,v])=>{ state.results[parseInt(k)||k]=v; });
+        if(d.predictions) Object.entries(d.predictions).forEach(([k,v])=>{
+          const id=parseInt(k)||k;
+          state.predictions[id]=Array.isArray(v)?v.filter(Boolean):Object.values(v).filter(Boolean);
+        });
+        recalcPoints(); renderAll(); syncBadge('ok');
+      }catch(err){ console.error('SSE parse:', err); }
+    });
+    es.addEventListener('patch', e=>{
+      try{ cloudLoad().then(()=>{ recalcPoints(); renderAll(); }); }catch(err){}
+    });
+    es.onerror = ()=>{ syncBadge('err'); };
+  }catch(e){ console.error('SSE init:', e); }
 }
 
 function save(){ recalcPoints(); cloudSave(); }
-
-async function cloudLoadFn(){ await cloudLoad(); }
 
 async function manualRefresh(){
   toast('🔄 جاري التحديث…');
@@ -385,8 +534,17 @@ async function manualRefresh(){
 // KNOWN RESULTS — تُحدَّث يدوياً مع كل مباراة (fallback ثابت)
 // ============================================================
 const KNOWN_RESULTS = {
-  1:  {s1:2, s2:0},  // المكسيك 2-0 جنوب أفريقيا (11 يونيو)
-  2:  {s1:2, s2:1},  // كوريا الجنوبية 2-1 التشيك (11 يونيو)
+  // يوم 11 يونيو
+  1: {s1:2, s2:0},  // المكسيك 2-0 جنوب أفريقيا
+  2: {s1:2, s2:1},  // كوريا الجنوبية 2-1 التشيك
+  // يوم 12 يونيو
+  3: {s1:1, s2:1},  // كندا 1-1 البوسنة والهرسك
+  4: {s1:4, s2:1},  // الولايات المتحدة 4-1 باراغواي
+  // يوم 13 يونيو — تُضاف تلقائياً بعد انتهاء المباريات
+  // 5: قطر vs سويسرا
+  // 6: البرازيل vs المغرب
+  // 7: هايتي vs اسكتلندا
+  // 8: أستراليا vs تركيا
 };
 
 function applyKnownResults(){
@@ -409,17 +567,20 @@ async function fetchLiveResults(){
 
   // أولاً: طبّق النتائج الثابتة المعروفة
   const knownAdded = applyKnownResults();
+  if(knownAdded > 0){ save(); renderAll(); }
 
-  // حدد المباريات التي تحتاج بحثاً (خلال 3 أيام ماضية وليس عندها نتيجة)
-  const today = new Date();
+  // حدد المباريات التي انتهت (أكثر من ساعتين من وقت البداية) وليس عندها نتيجة
+  const now = Date.now();
   const relevant = MATCHES.filter(m=>{
-    if(!m.date) return false;
-    const mDate = new Date(m.date + 'T23:59:00');
-    const diffDays = (today - mDate) / 86400000;
-    return diffDays >= 0 && diffDays <= 2 && !state.results[m.id];
+    if(!m.date || !m.time) return false;
+    if(state.results[m.id]) return false;
+    const dt = getMatchDateTime(m);
+    if(!dt) return false;
+    const diffMs = now - dt.getTime();
+    // المباراة انتهت: مضت أكثر من ساعتين (7200000ms) ولم تمضِ أكثر من 4 أيام
+    return diffMs > 7200000 && diffMs < 4 * 86400000;
   });
 
-  if(knownAdded > 0){ save(); renderAll(); }
   if(!relevant.length){
     if(aiStatus) aiStatus.textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-KW')}`;
     return;
@@ -427,47 +588,45 @@ async function fetchLiveResults(){
 
   if(aiStatus) aiStatus.innerHTML = '<span class="spinner-sm"></span> جاري البحث عن نتائج جديدة…';
 
+  const today = new Date();
   const matchList = relevant.map(m=>`id=${m.id}: ${m.t1} vs ${m.t2} on ${m.date}`).join('\n');
+  const userPrompt = `Search the web for the FINAL scores of these FIFA World Cup 2026 matches that have already been played:
+${matchList}
+
+Today is ${today.toISOString().split('T')[0]}.
+Return ONLY a raw JSON array, no markdown, no explanation:
+[{"id":1,"s1":2,"s2":0},{"id":2,"s1":1,"s2":1}]
+Only include matches with confirmed FINAL results. If a match has not finished, skip it.`;
 
   try{
-    // الخطوة 1: اطلب من Claude يبحث ويرجع JSON
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    // المرحلة 1: أرسل الطلب مع أداة البحث
+    const resp1 = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:2000,
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:
-`You are a sports data assistant. Search for the FINAL scores of these FIFA World Cup 2026 matches:
-${matchList}
-
-Today is ${today.toISOString().split('T')[0]}.
-After searching, respond with ONLY a raw JSON array (no markdown, no explanation), like:
-[{"id":1,"s1":2,"s2":0},{"id":2,"s1":1,"s2":1}]
-Only include matches with confirmed FINAL results. Skip matches not yet finished.`
-        }]
+        messages:[{role:'user', content: userPrompt}]
       })
     });
+    if(!resp1.ok) throw new Error('API '+resp1.status);
+    const data1 = await resp1.json();
 
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    const data = await resp.json();
+    // فحص إذا رجع نص مباشرة بدون tool_use
+    let finalText = (data1.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
 
-    // استخرج النص من كل أنواع الـ content blocks
-    let text = '';
-    if(data.content && Array.isArray(data.content)){
-      // قد يكون Claude أرسل tool_use ثم text — نجمع كل النصوص
-      for(const block of data.content){
-        if(block.type === 'text') text += block.text;
-        // إذا كان tool_result نتجاهله — Claude يعالجه داخلياً
-      }
-    }
+    // إذا احتاج tool_use، نكمل المحادثة
+    if(data1.stop_reason === 'tool_use'){
+      // نجمع كل tool_use blocks ونبني tool_result لكل واحدة
+      const toolResults = (data1.content||[])
+        .filter(b=>b.type==='tool_use')
+        .map(b=>({
+          type:'tool_result',
+          tool_use_id: b.id,
+          content: 'Search completed successfully. Please provide the JSON results now.'
+        }));
 
-    // إذا لم يأت نص مباشرة، Claude ربما احتاج turn إضافي للـ tool
-    // نرسل الـ conversation كاملة للحصول على الرد النهائي
-    if(!text.includes('[') && data.stop_reason === 'tool_use'){
-      const toolUseBlock = data.content.find(b=>b.type==='tool_use');
-      // نبني رد وهمي للـ tool ونطلب الـ final answer
       const resp2 = await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -476,44 +635,50 @@ Only include matches with confirmed FINAL results. Skip matches not yet finished
           max_tokens:1000,
           tools:[{type:'web_search_20250305',name:'web_search'}],
           messages:[
-            {role:'user', content:`You are a sports data assistant. Search for the FINAL scores of these FIFA World Cup 2026 matches:\n${matchList}\n\nToday is ${today.toISOString().split('T')[0]}.\nAfter searching, respond with ONLY a raw JSON array (no markdown, no explanation), like:\n[{"id":1,"s1":2,"s2":0}]\nOnly include matches with confirmed FINAL results.`},
-            {role:'assistant', content: data.content},
-            {role:'user', content:[{
-              type:'tool_result',
-              tool_use_id: toolUseBlock?.id || 'x',
-              content: 'Search completed. Please now return the JSON array of results.'
-            }]}
+            {role:'user', content: userPrompt},
+            {role:'assistant', content: data1.content},
+            {role:'user', content: toolResults}
           ]
         })
       });
+      if(!resp2.ok) throw new Error('API2 '+resp2.status);
       const data2 = await resp2.json();
-      text = (data2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+      finalText = (data2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+
+      // إذا احتاج tool_use مرة ثانية (نادر)، نأخذ أي نص موجود
+      if(data2.stop_reason === 'tool_use'){
+        finalText = (data2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+      }
     }
 
-    // استخرج الـ JSON array من النص
-    const match = text.match(/\[[\s\S]*?\]/);
-    if(match){
-      const results = JSON.parse(match[0]);
+    // استخرج الـ JSON من النص
+    const jsonMatch = finalText.match(/\[[\s\S]*?\]/);
+    if(jsonMatch){
+      const results = JSON.parse(jsonMatch[0]);
       let updated = 0;
       results.forEach(r=>{
         if(typeof r.id==='number' && typeof r.s1==='number' && typeof r.s2==='number'){
-          state.results[r.id] = {s1:r.s1, s2:r.s2, auto:true};
-          updated++;
+          if(!state.results[r.id]){ // لا نكتب فوق نتائج أدخلها الأدمن
+            state.results[r.id] = {s1:r.s1, s2:r.s2, auto:true};
+            updated++;
+          }
         }
       });
-      if(updated){ save(); renderAll(); toast(`🤖 ${updated} نتيجة جديدة تلقائياً`); }
+      if(updated > 0){ save(); renderAll(); toast(`🤖 ${updated} نتيجة جديدة`); }
     }
 
     if(aiStatus) aiStatus.textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-KW')}`;
   }catch(e){
-    if(aiStatus) aiStatus.textContent = `⚠️ خطأ في الاتصال — ${new Date().toLocaleTimeString('ar-KW')}`;
+    console.error('fetchLiveResults:', e);
+    if(aiStatus) aiStatus.textContent = `⚠️ سيعاد المحاولة — ${new Date().toLocaleTimeString('ar-KW')}`;
   }
   lastAIFetch = Date.now();
 }
 
 function startAutoRefresh(){
   if(autoInterval) clearInterval(autoInterval);
-  autoInterval = setInterval(()=>{ fetchLiveResults(); }, 2*60*1000);
+  // كل دقيقة: تحقق إذا في مباريات انتهت وتحتاج نتائج
+  autoInterval = setInterval(()=>{ fetchLiveResults(); }, 60*1000);
   fetchLiveResults();
 }
 
@@ -527,7 +692,10 @@ function addMember(){
   if(!team){toast('❗ اختر المنتخب');return;}
   if(state.members.find(m=>m.name===name)){toast('⚠️ الاسم موجود مسبقاً');return;}
   state.members.push({id:Date.now(),name,team,points:0,exact:0,win:0});
-  save(); document.getElementById('inp-name').value=''; renderAll(); toast('✅ أُضيف '+name);
+  document.getElementById('inp-name').value='';
+  renderAll();
+  toast('✅ أُضيف '+name);
+  cloudSave();
 }
 function deleteMember(id){
   if(!confirm('حذف هذا العضو؟'))return;
@@ -540,6 +708,8 @@ function deleteMember(id){
 // PREDICTIONS & RESULTS
 // ============================================================
 function savePred(matchId){
+  const match = MATCHES.find(m=>m.id===matchId);
+  if(match && isMatchLocked(match)){ toast('🔒 أُغلق باب التخمين'); return; }
   const s1=parseInt(document.getElementById('ps1-'+matchId).value);
   const s2=parseInt(document.getElementById('ps2-'+matchId).value);
   const memberId=parseInt(document.getElementById('pmem-'+matchId).value);
@@ -663,10 +833,26 @@ function renderMatches(){
 
     const autoLabel = res?.auto ? `<span class="auto-tag">🤖 تلقائي</span>` : '';
 
+    const locked = isMatchLocked(match);
+    const countdown = getCountdown(match);
+    const cdMs = countdown || 0;
+
+    // شريط العد التنازلي
+    let countdownBar = '';
+    if(!res && !locked && cdMs > 0){
+      const cdText = formatCountdown(cdMs);
+      const cls = cdMs < 3600000 ? 'countdown-soon' : 'countdown-open'; // أقل من ساعة = أصفر
+      countdownBar = `<div class="${cls}" id="cd-${match.id}">⏱️ يُغلق التخمين بعد: ${cdText}</div>`;
+    } else if(!res && locked){
+      countdownBar = `<div class="countdown-closed">🔒 أُغلق باب التخمين — المباراة بدأت</div>`;
+    }
+
     const resSection = res
-      ? `<div class="res-done">${getFlag(match.t1)} ${res.s1} — ${res.s2} ${getFlag(match.t2)} ${autoLabel}<button class="edit-res" onclick="editResult(${match.id})">✏️ تعديل</button></div>`
-      : `<div class="res-area">
-          <div class="res-title">📝 تسجيل النتيجة يدوياً</div>
+      ? `<div class="res-done">${getFlag(match.t1)} ${res.s1} — ${res.s2} ${getFlag(match.t2)}
+          ${isAdmin ? `<button class="edit-res" onclick="editResult(${match.id})">✏️ تعديل</button>` : ''}
+        </div>`
+      : isAdmin ? `<div class="res-area">
+          <div class="res-title">📝 تسجيل النتيجة (أدمن فقط)</div>
           <div class="res-row">
             <span style="font-size:11px;color:var(--muted)">${getFlag(match.t1)}</span>
             <input class="sinp" type="number" id="rs1-${match.id}" value="1" min="0" max="30">
@@ -675,9 +861,10 @@ function renderMatches(){
             <span style="font-size:11px;color:var(--muted)">${getFlag(match.t2)}</span>
             <button class="save-res" onclick="saveResult(${match.id})">💾 حفظ</button>
           </div>
-        </div>`;
+        </div>` : '';
 
-    const predSection = state.members.length>0&&!res ? `
+    // التخمين — يُغلق لما تبدأ المباراة
+    const predSection = state.members.length > 0 && !res && !locked ? `
       <div class="pred-wrap">
         <div class="pred-row">
           <span style="font-size:11px;color:var(--muted)">${getFlag(match.t1)}</span>
@@ -694,7 +881,7 @@ function renderMatches(){
 
     return`<div class="mc">
       <div class="mc-head">
-        <span>${fmtDate(match.date)}</span>
+        <span>${fmtDate(match.date)} • ${fmtMatchTime(match)}</span>
         ${match.group?`<span class="group-tag">م ${match.group}</span>`:''}
         <span class="phase-tag">${match.phase}</span>
       </div>
@@ -703,11 +890,32 @@ function renderMatches(){
         <div class="vs-box">${scoreBox}</div>
         <div class="tside"><div class="tflag">${getFlag(match.t2)}</div><div class="tname">${match.t2}</div></div>
       </div>
+      ${countdownBar}
       ${predSection}
       ${preds.length?`<div class="plist"><div class="plist-title">📋 توقعات (${preds.length})</div>${predRows}</div>`:''}
       ${resSection}
     </div>`;
   }).join('');
+
+  // تشغيل عداد تلقائي للتحديث كل ثانية
+  if(window._cdTimer) clearInterval(window._cdTimer);
+  window._cdTimer = setInterval(()=>{
+    MATCHES.forEach(match=>{
+      const el = document.getElementById('cd-'+match.id);
+      if(!el) return;
+      const cd = getCountdown(match);
+      if(cd <= 0){
+        el.className = 'countdown-closed';
+        el.textContent = '🔒 أُغلق باب التخمين — المباراة بدأت';
+        clearInterval(window._cdTimer);
+        renderMatches(); // أعد الرسم لإخفاء نموذج التخمين
+      } else {
+        const cls = cd < 3600000 ? 'countdown-soon' : 'countdown-open';
+        el.className = cls;
+        el.textContent = `⏱️ يُغلق التخمين بعد: ${formatCountdown(cd)}`;
+      }
+    });
+  }, 1000);
 }
 
 // ============================================================
@@ -720,6 +928,9 @@ function renderAll(){
   renderLeaderboard();
   renderMembers();
   renderMatches();
+  // حدّث زر الأدمن
+  const ab = document.getElementById('admin-btn');
+  if(ab) ab.textContent = isAdmin ? '🔓 أدمن (مفعّل)' : '🔐 أدمن';
 }
 
 // ============================================================
