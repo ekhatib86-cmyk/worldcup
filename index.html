@@ -805,7 +805,7 @@ function renderMembers(){
       <div class="mflag">${getFlag(m.team)}</div>
       <div class="minfo"><div class="mname">${m.name}</div><div class="mteam">${m.team}</div></div>
       <div class="mpts">${m.points}<span>نقطة</span></div>
-      <button class="del-btn" onclick="deleteMember(${m.id})">🗑️</button>
+      ${isAdmin ? `<button class="del-btn" onclick="deleteMember(${m.id})">🗑️</button>` : ''}
     </div>`).join('');
 }
 
