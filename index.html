@@ -117,27 +117,37 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
 <body>
 
 <div class="hero">
-  <span class="trophy">🏆</span>
+  <span class="trophy" id="trophy-btn" onclick="trophyTap()">🏆</span>
   <h1>كأس العالم 2026</h1>
   <p class="sub">بطولة العائلة الخاصة</p>
   <div class="hero-row">
     <div class="live-badge"><span class="live-dot"></span>نتائج حية تلقائية</div>
     <span id="sync-badge" style="font-size:11px;color:var(--muted);opacity:0;transition:opacity 1.5s"></span>
     <button class="refresh-btn" onclick="manualRefresh()">🔄 تحديث</button>
-    <button class="refresh-btn" onclick="toggleAdmin()" id="admin-btn" style="background:rgba(229,57,53,.15);border-color:rgba(229,57,53,.4);color:#ef5350">🔐 أدمن</button>
   </div>
+</div>
+
+<!-- شريط الأدمن السري -->
+<div id="admin-bar" style="display:none;background:#1a1a0a;border-bottom:2px solid #F5C518;padding:10px 16px;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center">
+  <span style="color:#F5C518;font-size:13px;font-weight:700">🔐 كلمة السر:</span>
+  <input id="admin-bar-input" type="password" placeholder="eman2026"
+    style="background:#0a0f0a;border:1px solid #F5C518;border-radius:8px;padding:8px 12px;color:#fff;font-family:Cairo,sans-serif;font-size:14px;outline:none;width:140px"
+    onkeydown="if(event.key==='Enter')submitAdminBar()">
+  <button onclick="submitAdminBar()" style="background:#F5C518;border:none;border-radius:8px;padding:8px 16px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;color:#000;cursor:pointer">دخول ✅</button>
+  <button onclick="document.getElementById('admin-bar').style.display='none'" style="background:transparent;border:1px solid #555;border-radius:8px;padding:8px 12px;font-family:Cairo,sans-serif;font-size:12px;color:#aaa;cursor:pointer">إلغاء</button>
 </div>
 
 <div class="tabs">
   <button class="tab-btn active" onclick="showTab('leaderboard',this)">🥇 الترتيب</button>
   <button class="tab-btn" onclick="showTab('matches',this)">⚽ المباريات</button>
   <button class="tab-btn" onclick="showTab('members',this)">👥 الأعضاء</button>
-  <button class="tab-btn" onclick="showTab('info',this)">⚙️ الإعداد</button>
 </div>
 
 <div class="content">
 
-  <div id="tab-leaderboard" class="section active"><div id="lb-list"></div></div>
+  <div id="tab-leaderboard" class="section active">
+    <div id="lb-list"></div>
+  </div>
 
   <div id="tab-matches" class="section">
     <div class="filter-bar" id="phase-filter"></div>
@@ -154,53 +164,19 @@ body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);min
     <div id="members-list"></div>
   </div>
 
-  <div id="tab-info" class="section">
-    <div class="card">
-      <div class="card-title">☁️ حالة الاتصال</div>
-      <div class="status-ok">✅ متصل بـ Firebase — كل العائلة تشوف نفس البيانات فوراً 🔥</div>
-      <p style="font-size:12px;color:var(--muted);line-height:2">
-        • أي عضو يضاف يظهر للكل فوراً<br>
-        • أي توقع يُحفظ يظهر للكل فوراً<br>
-        • النتائج تتحدث تلقائياً كل دقيقتين<br>
-        • لا يحتاج أي إعداد — فقط افتح الرابط
-      </p>
-    </div>
-    <div class="card">
-      <div class="card-title">🤖 التحديث التلقائي للنتائج</div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:10px">
-        التطبيق يجيب النتائج الحية كل <strong style="color:var(--gold)">دقيقتين</strong> تلقائياً.<br>
-        لا تحتاجين أي إعداد إضافي.
-      </p>
-      <div id="ai-status" style="font-size:12px;color:var(--muted)"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">📋 نظام النقاط</div>
-      <div class="pts-info">
-        <div class="pts-box"><div class="pv">5</div><div class="pk">نتيجة كاملة 🎯</div></div>
-        <div class="pts-box"><div class="pv">3</div><div class="pk">الفائز صح ✅</div></div>
-        <div class="pts-box"><div class="pv">0</div><div class="pk">خطأ ❌</div></div>
-      </div>
-      <hr class="divider">
-      <p style="font-size:12px;color:var(--muted);line-height:1.8">
-        🎯 <strong style="color:var(--exact)">5 نقاط</strong> — النتيجة بالضبط<br>
-        ✅ <strong style="color:var(--win)">3 نقاط</strong> — الفائز صح بس مش الرقم<br>
-        🤝 <strong style="color:var(--win)">3 نقاط</strong> — توقعت تعادل وكانت تعادل<br>
-        ❌ <strong style="color:var(--muted)">0 نقاط</strong> — توقعت غلط
-      </p>
-    </div>
-  </div>
+  <div id="ai-status" style="display:none"></div>
 
 </div>
 
-<div id="admin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#1a211a;border:1px solid #F5C518;border-radius:16px;padding:24px;width:100%;max-width:320px;text-align:center">
-    <div style="font-size:32px;margin-bottom:8px">🔐</div>
-    <div style="font-size:16px;font-weight:700;color:#F5C518;margin-bottom:16px">دخول الأدمن</div>
-    <input id="admin-pass-input" type="password" placeholder="كلمة السر" 
-      style="width:100%;background:#0a0f0a;border:1px solid #2a3a2a;border-radius:8px;padding:12px;color:#e8f5e9;font-family:Cairo,sans-serif;font-size:16px;text-align:center;outline:none;margin-bottom:12px"
+<div id="admin-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:9999;padding:20px">
+  <div style="background:#1a211a;border:2px solid #F5C518;border-radius:16px;padding:28px 20px;width:100%;max-width:320px;text-align:center;margin:80px auto 0">
+    <div style="font-size:36px;margin-bottom:10px">🔐</div>
+    <div style="font-size:17px;font-weight:700;color:#F5C518;margin-bottom:18px">دخول الأدمن</div>
+    <input id="admin-pass-input" type="password" placeholder="كلمة السر"
+      style="width:100%;background:#0a0f0a;border:1px solid #F5C518;border-radius:8px;padding:13px;color:#fff;font-family:Cairo,sans-serif;font-size:18px;text-align:center;outline:none;margin-bottom:14px;display:block"
       onkeydown="if(event.key==='Enter')submitAdminPass()">
-    <button onclick="submitAdminPass()" style="width:100%;padding:11px;background:#F5C518;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;color:#000;cursor:pointer;margin-bottom:8px">دخول ✅</button>
-    <button onclick="closeAdminModal()" style="width:100%;padding:9px;background:transparent;border:1px solid #2a3a2a;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;color:#7a9b7c;cursor:pointer">إلغاء</button>
+    <button onclick="submitAdminPass()" style="width:100%;padding:13px;background:#F5C518;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:16px;font-weight:700;color:#000;cursor:pointer;margin-bottom:10px;display:block">دخول ✅</button>
+    <button onclick="closeAdminModal()" style="width:100%;padding:11px;background:transparent;border:1px solid #555;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;color:#aaa;cursor:pointer;display:block">إلغاء</button>
   </div>
 </div>
 
@@ -386,6 +362,18 @@ function fmtMatchTime(match){
 const ADMIN_PASS = 'eman2026';
 let isAdmin = localStorage.getItem('wc26_admin') === 'yes';
 
+// ضغطة سرية على الكأس 5 مرات
+let _trophyTaps = 0, _trophyTimer = null;
+function trophyTap(){
+  _trophyTaps++;
+  clearTimeout(_trophyTimer);
+  _trophyTimer = setTimeout(()=>{ _trophyTaps=0; }, 2000);
+  if(_trophyTaps >= 5){
+    _trophyTaps = 0;
+    toggleAdmin();
+  }
+}
+
 function toggleAdmin(){
   if(isAdmin){
     isAdmin = false;
@@ -394,9 +382,27 @@ function toggleAdmin(){
     toast('🔒 خرجتِ من وضع الأدمن');
     return;
   }
-  document.getElementById('admin-modal').style.display='flex';
-  document.getElementById('admin-pass-input').value='';
-  setTimeout(()=>document.getElementById('admin-pass-input').focus(),100);
+  const bar = document.getElementById('admin-bar');
+  if(bar){
+    const showing = bar.style.display === 'flex';
+    bar.style.display = showing ? 'none' : 'flex';
+    if(!showing) setTimeout(()=>document.getElementById('admin-bar-input')?.focus(), 150);
+  }
+}
+
+function submitAdminBar(){
+  const inp = document.getElementById('admin-bar-input');
+  if(!inp) return;
+  if(inp.value === ADMIN_PASS){
+    isAdmin = true;
+    localStorage.setItem('wc26_admin','yes');
+    document.getElementById('admin-bar').style.display = 'none';
+    renderAll();
+    toast('✅ أهلاً بك أدمن!');
+  } else {
+    toast('❌ كلمة السر غلط');
+    inp.value = '';
+  }
 }
 
 function submitAdminPass(){
