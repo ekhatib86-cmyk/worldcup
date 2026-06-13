@@ -317,7 +317,7 @@ const TEAMS = [
 // ============================================================
 // STATE
 // ============================================================
-let state = { members:[], results:{}, predictions:{} };
+let state = { members:[], results:{}, predictions:{}, prizeWeek:1 };
 let curFilter = 'دور المجموعات';
 let lastAIFetch = 0;
 let autoInterval = null;
@@ -458,7 +458,7 @@ async function cloudSave(){
     state.members.forEach(m => { membersObj['m'+m.id] = m; });
     await fbFetch(FB_PATH, {
       method: 'PUT',
-      body: JSON.stringify({ members: membersObj, results: state.results, predictions: state.predictions })
+      body: JSON.stringify({ members: membersObj, results: state.results, predictions: state.predictions, prizeWeek: state.prizeWeek||1 })
     });
     syncBadge('ok');
   }catch(e){
@@ -488,14 +488,17 @@ async function cloudLoad(){
       state.predictions = {};
       if(data.predictions) Object.entries(data.predictions).forEach(([k,v])=>{
         const id = parseInt(k)||k;
-        state.predictions[id] = Array.isArray(v) ? v.filter(Boolean) : Object.values(v).filter(Boolean);
+        const arr = Array.isArray(v) ? v.filter(Boolean) : Object.values(v).filter(Boolean);
+        // نحافظ على memberId كـ number إذا كان number
+        state.predictions[id] = arr.map(p=>({
+          ...p,
+          memberId: typeof p.memberId === 'string' ? (parseInt(p.memberId)||p.memberId) : p.memberId,
+          s1: parseInt(p.s1), s2: parseInt(p.s2)
+        }));
       });
+      if(data.prizeWeek) state.prizeWeek = data.prizeWeek;
       syncBadge('ok');
       return;
-    }catch(e){
-      console.error(`load attempt ${attempt}:`, e);
-      if(attempt < 3) await new Promise(r=>setTimeout(r, 1500));
-      else syncBadge('err');
     }
   }
 }
@@ -776,7 +779,29 @@ function renderLeaderboard(){
   const el=document.getElementById('lb-list');
   if(!state.members.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏆</div><div class="empty-text">أضف أفراد العائلة من تبويب الأعضاء!</div></div>';return;}
   const medals=['🥇','🥈','🥉'];
-  el.innerHTML=[...state.members].sort((a,b)=>b.points-a.points).map((m,i)=>`
+  const sorted=[...state.members].sort((a,b)=>b.points-a.points);
+  const winner = sorted[0];
+
+  // بانر جائزة الأسبوع
+  const prizeWeek = state.prizeWeek || 1;
+  const prizeHTML = winner && winner.points > 0 ? `
+    <div style="background:linear-gradient(135deg,rgba(245,197,24,.12),rgba(245,197,24,.04));border:1px solid rgba(245,197,24,.4);border-radius:14px;padding:14px 16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px">🎁 جائزة الأسبوع ${prizeWeek}</div>
+      <div style="font-size:22px;margin-bottom:4px">🏆</div>
+      <div style="font-size:16px;font-weight:900;color:#F5C518">${winner.name}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${winner.points} نقطة • ${getFlag(winner.team)} ${winner.team}</div>
+      <div style="margin-top:10px;font-size:11px;background:rgba(245,197,24,.1);border-radius:8px;padding:6px 10px;color:#F5C518;font-weight:700">
+        🎉 مبروك! الجائزة الإلكترونية بانتظارك
+      </div>
+      ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:6px;justify-content:center">
+        <button onclick="state.prizeWeek=(state.prizeWeek||1)+1;cloudSave();renderLeaderboard();toast('✅ أسبوع جديد!')" style="background:var(--green);border:1px solid var(--green2);border-radius:8px;padding:6px 14px;font-family:Cairo,sans-serif;font-size:11px;font-weight:700;color:#F5C518;cursor:pointer">📅 أسبوع جديد</button>
+      </div>` : ''}
+    </div>` : `
+    <div style="background:rgba(245,197,24,.04);border:1px dashed rgba(245,197,24,.2);border-radius:14px;padding:12px 16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:11px;color:var(--muted)">🎁 جائزة الأسبوع ${prizeWeek} — خمّن وافوز!</div>
+    </div>`;
+
+  el.innerHTML = prizeHTML + sorted.map((m,i)=>`
     <div class="lb-item ${i<3?'r'+(i+1):''}">
       <div class="rnum">${medals[i]||(i+1)}</div>
       <div class="rflag">${getFlag(m.team)}</div>
@@ -824,7 +849,7 @@ function renderMatches(){
     const res=state.results[match.id];
     const preds=state.predictions[match.id]||[];
     const predRows=preds.map(p=>{
-      const mem=state.members.find(m=>m.id===p.memberId);if(!mem)return'';
+      const mem=state.members.find(m=>String(m.id)===String(p.memberId));if(!mem)return'';
       let badge='',bc='b-pend';
       if(res){
         if(p.s1===res.s1&&p.s2===res.s2){badge='🎯 +5 كاملة';bc='b-exact';}
