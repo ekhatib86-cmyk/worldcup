@@ -475,9 +475,10 @@ async function cloudLoad(){
       if(!data){ syncBadge('ok'); return; }
       // members
       if(data.members){
-        state.members = Array.isArray(data.members)
+        const arr = Array.isArray(data.members)
           ? data.members.filter(Boolean)
           : Object.values(data.members).filter(Boolean);
+        state.members = arr.map(m=>({...m, id:String(m.id)}));
       }
       // results
       state.results = {};
@@ -492,7 +493,7 @@ async function cloudLoad(){
         // نحافظ على memberId كـ number إذا كان number
         state.predictions[id] = arr.map(p=>({
           ...p,
-          memberId: typeof p.memberId === 'string' ? (parseInt(p.memberId)||p.memberId) : p.memberId,
+          memberId: String(p.memberId),
           s1: parseInt(p.s1), s2: parseInt(p.s2)
         }));
       });
@@ -705,7 +706,7 @@ function addMember(){
   if(!name){toast('❗ أدخل الاسم');return;}
   if(!team){toast('❗ اختر المنتخب');return;}
   if(state.members.find(m=>m.name===name)){toast('⚠️ الاسم موجود مسبقاً');return;}
-  state.members.push({id:Date.now(),name,team,points:0,exact:0,win:0});
+  state.members.push({id:String(Date.now()),name,team,points:0,exact:0,win:0});
   document.getElementById('inp-name').value='';
   renderAll();
   toast('✅ أُضيف '+name);
@@ -726,11 +727,11 @@ function savePred(matchId){
   if(match && isMatchLocked(match)){ toast('🔒 أُغلق باب التخمين'); return; }
   const s1=parseInt(document.getElementById('ps1-'+matchId).value);
   const s2=parseInt(document.getElementById('ps2-'+matchId).value);
-  const memberId=parseInt(document.getElementById('pmem-'+matchId).value);
+  const memberId=String(document.getElementById('pmem-'+matchId).value);
   if(isNaN(s1)||isNaN(s2)||s1<0||s2<0){toast('❗ أدخل نتيجة صحيحة');return;}
-  if(!memberId){toast('❗ اختر عضوًا');return;}
+  if(!memberId||memberId==='0'){toast('❗ اختر عضوًا');return;}
   if(!state.predictions[matchId])state.predictions[matchId]=[];
-  const idx=state.predictions[matchId].findIndex(p=>p.memberId===memberId);
+  const idx=state.predictions[matchId].findIndex(p=>String(p.memberId)===memberId);
   if(idx>=0)state.predictions[matchId][idx]={memberId,s1,s2};
   else state.predictions[matchId].push({memberId,s1,s2});
   save(); renderAll(); toast('✅ تم حفظ التوقع');
@@ -754,7 +755,7 @@ function recalcPoints(){
   MATCHES.forEach(match=>{
     const r=state.results[match.id]; if(!r)return;
     (state.predictions[match.id]||[]).forEach(p=>{
-      const mem=state.members.find(m=>String(m.id)===String(p.memberId)||String(m.id)==='m'+String(p.memberId));if(!mem)return;
+      const mem=state.members.find(m=>String(m.id)===String(p.memberId));if(!mem)return;
       if(p.s1===r.s1&&p.s2===r.s2){mem.points+=5;mem.exact++;}
       else if((p.s1>p.s2&&r.s1>r.s2)||(p.s1<p.s2&&r.s1<r.s2)||(p.s1===p.s2&&r.s1===r.s2)){mem.points+=3;mem.win++;}
     });
@@ -853,8 +854,7 @@ function renderMatches(){
     const res=state.results[match.id];
     const preds=state.predictions[match.id]||[];
     const predRows=preds.map(p=>{
-      const mid=String(p.memberId);
-      const mem=state.members.find(m=>String(m.id)===mid||String(m.id)==='m'+mid||'m'+mid===String(m.id));
+      const mem=state.members.find(m=>String(m.id)===String(p.memberId));
       if(!mem)return'';
       let badge='',bc='b-pend';
       if(res){
