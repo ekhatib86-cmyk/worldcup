@@ -517,14 +517,16 @@ function startRealtimeSync(){
         const d = JSON.parse(e.data).data;
         if(!d) return;
         if(d.members){
-          state.members = Array.isArray(d.members)
+          const arr = Array.isArray(d.members)
             ? d.members.filter(Boolean)
             : Object.values(d.members).filter(Boolean);
+          state.members = arr.map(m=>({...m, id:String(m.id)}));
         }
         if(d.results) Object.entries(d.results).forEach(([k,v])=>{ state.results[parseInt(k)||k]=v; });
         if(d.predictions) Object.entries(d.predictions).forEach(([k,v])=>{
           const id=parseInt(k)||k;
-          state.predictions[id]=Array.isArray(v)?v.filter(Boolean):Object.values(v).filter(Boolean);
+          const arr=Array.isArray(v)?v.filter(Boolean):Object.values(v).filter(Boolean);
+          state.predictions[id]=arr.map(p=>({...p,memberId:String(p.memberId),s1:parseInt(p.s1),s2:parseInt(p.s2)}));
         });
         recalcPoints(); renderAll(); syncBadge('ok');
       }catch(err){ console.error('SSE parse:', err); }
@@ -580,9 +582,9 @@ function applyKnownResults(){
 async function fetchLiveResults(){
   const aiStatus = document.getElementById('ai-status');
 
-  // أولاً: طبّق النتائج الثابتة المعروفة
+  // أولاً: طبّق النتائج الثابتة المعروفة — بدون save لتجنب الكتابة فوق البيانات
   const knownAdded = applyKnownResults();
-  if(knownAdded > 0){ save(); renderAll(); }
+  if(knownAdded > 0){ cloudSave(); renderAll(); }
 
   // حدد المباريات التي انتهت (أكثر من ساعتين من وقت البداية) وليس عندها نتيجة
   const now = Date.now();
@@ -734,14 +736,24 @@ function savePred(matchId){
   const idx=state.predictions[matchId].findIndex(p=>String(p.memberId)===memberId);
   if(idx>=0)state.predictions[matchId][idx]={memberId,s1,s2};
   else state.predictions[matchId].push({memberId,s1,s2});
-  save(); renderAll(); toast('✅ تم حفظ التوقع');
+  // احفظ التخمين مباشرة في Firebase بدون الكتابة فوق كل البيانات
+  const predIndex = idx>=0 ? idx : state.predictions[matchId].length-1;
+  fetch(`${FB_BASE}${FB_PATH}/predictions/${matchId}/${predIndex}.json`,{
+    method:'PUT',
+    body:JSON.stringify({memberId,s1,s2})
+  }).catch(e=>console.error('pred save:',e));
+  recalcPoints(); renderAll(); toast('✅ تم حفظ التوقع');
 }
 function saveResult(matchId){
   const s1=parseInt(document.getElementById('rs1-'+matchId).value);
   const s2=parseInt(document.getElementById('rs2-'+matchId).value);
   if(isNaN(s1)||isNaN(s2)||s1<0||s2<0){toast('❗ أدخل النتيجة');return;}
   state.results[matchId]={s1,s2,auto:false};
-  save(); renderAll(); toast('🎉 تم تسجيل النتيجة!');
+  fetch(`${FB_BASE}${FB_PATH}/results/${matchId}.json`,{
+    method:'PUT',
+    body:JSON.stringify({s1,s2,auto:false})
+  }).catch(e=>console.error('result save:',e));
+  recalcPoints(); renderAll(); toast('🎉 تم تسجيل النتيجة!');
 }
 function editResult(matchId){
   delete state.results[matchId]; save(); renderAll();
