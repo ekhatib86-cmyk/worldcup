@@ -754,7 +754,7 @@ function recalcPoints(){
   MATCHES.forEach(match=>{
     const r=state.results[match.id]; if(!r)return;
     (state.predictions[match.id]||[]).forEach(p=>{
-      const mem=state.members.find(m=>m.id===p.memberId);if(!mem)return;
+      const mem=state.members.find(m=>String(m.id)===String(p.memberId)||String(m.id)==='m'+String(p.memberId));if(!mem)return;
       if(p.s1===r.s1&&p.s2===r.s2){mem.points+=5;mem.exact++;}
       else if((p.s1>p.s2&&r.s1>r.s2)||(p.s1<p.s2&&r.s1<r.s2)||(p.s1===p.s2&&r.s1===r.s2)){mem.points+=3;mem.win++;}
     });
@@ -853,7 +853,9 @@ function renderMatches(){
     const res=state.results[match.id];
     const preds=state.predictions[match.id]||[];
     const predRows=preds.map(p=>{
-      const mem=state.members.find(m=>String(m.id)===String(p.memberId));if(!mem)return'';
+      const mid=String(p.memberId);
+      const mem=state.members.find(m=>String(m.id)===mid||String(m.id)==='m'+mid||'m'+mid===String(m.id));
+      if(!mem)return'';
       let badge='',bc='b-pend';
       if(res){
         if(p.s1===res.s1&&p.s2===res.s2){badge='🎯 +5 كاملة';bc='b-exact';}
