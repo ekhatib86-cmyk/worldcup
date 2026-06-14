@@ -499,6 +499,10 @@ async function cloudLoad(){
       if(data.prizeWeek) state.prizeWeek = data.prizeWeek;
       syncBadge('ok');
       return;
+    }catch(e){
+      console.error(`load attempt ${attempt}:`, e);
+      if(attempt < 3) await new Promise(r=>setTimeout(r, 1500));
+      else syncBadge('err');
     }
   }
 }
